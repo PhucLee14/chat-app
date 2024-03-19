@@ -24,12 +24,39 @@ export const sendMessage = async (req, res) => {
         });
 
         if (newMessage) {
-            conversation.message.push(newMessage._id);
+            conversation.messages.push(newMessage._id);
         }
+
+        // SOCKET IO FUNCTIONALITY
+
+        // await conversation.save();
+        // await newMessage.save();
+
+        await Promise.all([conversation.save(), newMessage.save()]);
 
         res.status(201).json(newMessage);
     } catch (error) {
         console.log("Error in sendMessage controller", error.message);
         res.status(500).json({ error: "Internal server errorrr" });
+    }
+};
+
+export const getMessages = async (req, res) => {
+    try {
+        const { id: userToChatId } = req.params;
+        const senderId = req.user._id;
+
+        const conversation = await Conversation.findOne({
+            participants: { $all: [senderId, userToChatId] },
+        }).populate("messages");
+
+        if (!conversation) return res.status(200).json([]);
+
+        const messages = conversation.messages;
+
+        res.status(200).json(messages);
+    } catch (error) {
+        console.log("Error in getMessages controller", error.message);
+        res.status(500).json({ error: "Internal server error" });
     }
 };
